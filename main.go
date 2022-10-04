@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	Width              = 200
-	Height             = 100
-	DistanceToViewport = 10
+	Width              = 1024
+	Height             = 768
+	DistanceToViewport = 500
 
 	DefaultViewDistance = 10
 
@@ -49,15 +49,15 @@ type Sphere struct {
 }
 
 type Viewport struct {
-	width  uint16
-	height uint16
+	width  uint
+	height uint
 }
 
 type Camera struct {
 	origin             *Vector
 	viewport           *Viewport
-	distanceToViewport uint16
-	viewDistance       uint16
+	distanceToViewport uint
+	viewDistance       uint
 }
 
 type MyGame struct {
@@ -67,10 +67,9 @@ type MyGame struct {
 	camera        *Camera
 }
 
-func NewMyGame(maxSpheresNum uint8, origin *Vector, width, height, distanceToViewport, viewDistance uint16) *MyGame {
+func NewMyGame(maxSpheresNum uint8, origin *Vector, width, height, distanceToViewport, viewDistance uint) *MyGame {
 	framebuffer := make([]*color.RGBA, width*height)
-
-	for i := 0; i < int(width*height); i++ {
+	for i, _ := range framebuffer {
 		framebuffer[i] = BackgroundColor
 	}
 
@@ -95,9 +94,9 @@ func (g *MyGame) IntersectRaySphere(O, D *Vector, sphere *Sphere) (bool, float64
 
 	a := Dot(D, D)
 	b := Dot(CO, D)
-	c := Dot(CO, CO) - (radius * radius)
+	c := Dot(CO, CO) - math.Pow(radius, 2)
 
-	discriminant := (b * b) - a*c
+	discriminant := math.Pow(b, 2) - a*c
 	if discriminant < 0 {
 		return false, 0, 0
 	}
@@ -135,8 +134,8 @@ func (g *MyGame) UpdateFramebuffer() {
 	vh := g.camera.viewport.height
 	vw := g.camera.viewport.width
 
-	for l := uint16(0); l < vh; l++ {
-		for k := uint16(0); k < vw; k++ {
+	for l := uint(0); l < vh; l++ {
+		for k := uint(0); k < vw; k++ {
 			vx := float64(k) - float64(vw/2)
 			vy := float64(l) - float64(vh/2)
 			vz := float64(g.camera.distanceToViewport)
@@ -155,8 +154,8 @@ func (g *MyGame) Update(screen *ebiten.Image) error {
 	vh := g.camera.viewport.height
 	vw := g.camera.viewport.width
 
-	for l := uint16(0); l < vh; l++ {
-		for k := uint16(0); k < vw; k++ {
+	for l := uint(0); l < vh; l++ {
+		for k := uint(0); k < vw; k++ {
 			i := l*vw + k
 			rgba := g.framebuffer[i]
 			screen.Set(int(k), int(l), rgba)
@@ -179,8 +178,8 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 	for i := 0; i < MaxSpheresNum; i++ {
 		sphere := &Sphere{
-			center: &Vector{rand.Float64() * 10, rand.Float64() * 10, rand.Float64() * 10},
-			radius: rand.Float64() * 100,
+			center: &Vector{rand.Float64() * 100, rand.Float64() * 100, rand.Float64() * 1000},
+			radius: rand.Float64() * 1000,
 			rgba:   &color.RGBA{R: uint8(rand.Intn(0xff)), G: uint8(rand.Intn(0xff)), B: uint8(rand.Intn(0xff)), A: uint8(rand.Intn(0xff))},
 		}
 		myGame.spheres[i] = sphere
