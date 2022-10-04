@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/hajimehoshi/ebiten"
+	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/welcomehyunseo/golang-3d-graphics-example/geometry"
 	"image/color"
 	"math"
@@ -129,7 +129,11 @@ func (g *MyGame) UpdateFramebuffer() {
 	}
 }
 
-func (g *MyGame) Update(screen *ebiten.Image) error {
+func (g *MyGame) Update() error {
+	return nil
+}
+
+func (g *MyGame) Draw(screen *ebiten.Image) {
 
 	vh := g.camera.viewport.height
 	vw := g.camera.viewport.width
@@ -141,7 +145,6 @@ func (g *MyGame) Update(screen *ebiten.Image) error {
 			screen.Set(int(k), int(l), rgba)
 		}
 	}
-	return nil
 }
 
 func (g *MyGame) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
