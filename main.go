@@ -2,49 +2,42 @@ package main
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/welcomehyunseo/golang-3d-graphics-example/geometry"
+	"github.com/welcomehyunseo/golang-3d-graphics-example/object"
+	"github.com/welcomehyunseo/golang-3d-graphics-example/vector"
 	"image/color"
 	"math"
-	"math/rand"
-	"time"
 )
 
 const (
-	Width               = 1024
-	Height              = 768
-	DistanceToViewport  = 500
-	DefaultViewDistance = 10
+	Width                       = 1024
+	Height                      = 768
+	DistanceToViewport          = 500
+	DefaultViewDistanceMultiple = 10
 )
 
 var (
 	BackgroundColor = &color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
 )
 
-type Sphere struct {
-	center *geometry.Vector
-	radius float64
-	rgba   *color.RGBA
-}
-
 type Viewport struct {
-	width  uint
-	height uint
+	width  int
+	height int
 }
 
 type Camera struct {
-	origin             *geometry.Vector
-	viewport           *Viewport
-	distanceToViewport uint
-	viewDistance       uint
+	origin               *vector.Vector
+	viewport             *Viewport
+	distanceToViewport   int
+	viewDistanceMultiple int
 }
 
 type MyGame struct {
 	framebuffer []*color.RGBA
-	spheres     []*Sphere
+	spheres     []*object.Sphere
 	camera      *Camera
 }
 
-func NewMyGame(origin *geometry.Vector, width, height, distanceToViewport, viewDistance uint) *MyGame {
+func NewMyGame(origin *vector.Vector, width, height, distanceToViewport, viewDistanceMultiple int) *MyGame {
 	framebuffer := make([]*color.RGBA, width*height)
 	for i, _ := range framebuffer {
 		framebuffer[i] = BackgroundColor
@@ -52,29 +45,29 @@ func NewMyGame(origin *geometry.Vector, width, height, distanceToViewport, viewD
 
 	return &MyGame{
 		framebuffer: framebuffer,
-		spheres:     []*Sphere{},
+		spheres:     []*object.Sphere{},
 		camera: &Camera{
 			origin,
 			&Viewport{width, height},
 			distanceToViewport,
-			viewDistance,
+			viewDistanceMultiple,
 		},
 	}
 }
 
-func (g *MyGame) AddSphere(sphere *Sphere) {
+func (g *MyGame) AddSphere(sphere *object.Sphere) {
 	g.spheres = append(g.spheres, sphere)
 }
 
-// IntersectRaySphere
+// IntersectRayobject.Sphere
 // return isMet, t1, t2
-func (g *MyGame) IntersectRaySphere(O, D *geometry.Vector, sphere *Sphere) (bool, float64, float64) {
-	radius := sphere.radius
-	CO := geometry.Subtract(O, sphere.center)
+func (g *MyGame) IntersectRaySphere(O, D *vector.Vector, sphere *object.Sphere) (bool, float64, float64) {
+	radius := sphere.GetRadius()
+	CO := vector.Subtract(O, sphere.GetCenter())
 
-	a := geometry.Dot(D, D)
-	b := geometry.Dot(CO, D)
-	c := geometry.Dot(CO, CO) - math.Pow(radius, 2)
+	a := vector.Dot(D, D)
+	b := vector.Dot(CO, D)
+	c := vector.Dot(CO, CO) - math.Pow(radius, 2)
 
 	discriminant := math.Pow(b, 2) - a*c
 	if discriminant < 0 {
@@ -85,11 +78,11 @@ func (g *MyGame) IntersectRaySphere(O, D *geometry.Vector, sphere *Sphere) (bool
 	return true, t1, t2
 }
 
-func (g *MyGame) TraceRay(O, D *geometry.Vector) *color.RGBA {
+func (g *MyGame) TraceRay(O, D *vector.Vector) *color.RGBA {
 	tMin := 1
-	tMax := g.camera.viewDistance
+	tMax := g.camera.viewDistanceMultiple
 	closestT := math.MaxFloat64
-	var closestSphere *Sphere = nil
+	var closestSphere *object.Sphere = nil
 	for _, sphere := range g.spheres {
 		isMet, t1, t2 := g.IntersectRaySphere(O, D, sphere)
 		if !isMet {
@@ -107,21 +100,21 @@ func (g *MyGame) TraceRay(O, D *geometry.Vector) *color.RGBA {
 	if closestSphere == nil {
 		return BackgroundColor
 	}
-	return closestSphere.rgba
+	return closestSphere.GetRGBA()
 }
 
 func (g *MyGame) UpdateFramebuffer() {
-	vh := g.camera.viewport.height
 	vw := g.camera.viewport.width
+	vh := g.camera.viewport.height
 
-	for l := uint(0); l < vh; l++ {
-		for k := uint(0); k < vw; k++ {
-			vx := float64(k) - float64(vw/2)
-			vy := float64(l) - float64(vh/2)
+	for l := 0; l < vh; l++ {
+		for k := 0; k < vw; k++ {
+			vx := float64(k - vw/2)
+			vy := -float64(l - vh/2)
 			vz := float64(g.camera.distanceToViewport)
-			V := geometry.NewVector(vx, vy, vz)
+			V := vector.NewVector(vx, vy, vz)
 			O := g.camera.origin
-			D := geometry.Subtract(V, O)
+			D := vector.Subtract(V, O)
 			rgba := g.TraceRay(O, D)
 			i := l*vw + k
 			g.framebuffer[i] = rgba
@@ -138,11 +131,11 @@ func (g *MyGame) Draw(screen *ebiten.Image) {
 	vh := g.camera.viewport.height
 	vw := g.camera.viewport.width
 
-	for l := uint(0); l < vh; l++ {
-		for k := uint(0); k < vw; k++ {
+	for l := 0; l < vh; l++ {
+		for k := 0; k < vw; k++ {
 			i := l*vw + k
 			rgba := g.framebuffer[i]
-			screen.Set(int(k), int(l), rgba)
+			screen.Set(k, l, rgba)
 		}
 	}
 }
@@ -151,35 +144,32 @@ func (g *MyGame) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHei
 	return outsideWidth, outsideHeight
 }
 
-func RandomRGBA() *color.RGBA {
-	return &color.RGBA{
-		R: uint8(rand.Intn(0xff)),
-		G: uint8(rand.Intn(0xff)),
-		B: uint8(rand.Intn(0xff)),
-		A: uint8(rand.Intn(0xff)),
-	}
-}
-
-func RandomSphere() *Sphere {
-	rand.Seed(time.Now().UnixNano())
-	return &Sphere{
-		center: geometry.NewVector(rand.Float64()*100, rand.Float64()*100, rand.Float64()*1000),
-		radius: rand.Float64() * 1000,
-		rgba:   RandomRGBA(),
-	}
-}
-
 func main() {
 	ebiten.SetWindowSize(Width, Height)
 	ebiten.SetWindowTitle("Basic Raytracing")
 
-	origin := geometry.NewVector(0, 0, 0)
-	myGame := NewMyGame(origin, Width, Height, DistanceToViewport, DefaultViewDistance)
+	origin := vector.NewVector(0, 0, 0)
+	myGame := NewMyGame(origin, Width, Height, DistanceToViewport, DefaultViewDistanceMultiple)
 
-	for i := 0; i < 10; i++ {
-		sphere := RandomSphere()
-		myGame.AddSphere(sphere)
-	}
+	sphere := object.NewSphere(
+		vector.NewVector(0, 0, 1000),
+		300,
+		&color.RGBA{R: 0xff, A: 0xff},
+	)
+	myGame.AddSphere(sphere)
+	sphere1 := object.NewSphere(
+		vector.NewVector(300, 100, 600),
+		200,
+		&color.RGBA{G: 0xff, A: 0xff},
+	)
+	myGame.AddSphere(sphere1)
+
+	sphere2 := object.NewSphere(
+		vector.NewVector(-500, -200, 1200),
+		500,
+		&color.RGBA{B: 0xff, A: 0xff},
+	)
+	myGame.AddSphere(sphere2)
 
 	go func() {
 		for {
