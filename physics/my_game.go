@@ -59,8 +59,8 @@ func (g *MyGame) AddSphere(sphere *object.Sphere) {
 }
 
 // ComputeLightIntensity
-// params point at object surface, normal vector
-func (g *MyGame) ComputeLightIntensity(P, N *vector.Vector) float64 {
+// params point at object surface, normal vector, D, specular
+func (g *MyGame) ComputeLightIntensity(P, N, D *vector.Vector, s float64) float64 {
 	var intensity float64 = 0
 
 	for _, l := range g.lights {
@@ -85,10 +85,16 @@ func (g *MyGame) ComputeLightIntensity(P, N *vector.Vector) float64 {
 		}
 
 		var0 := N.Dot(L)
-		if var0 <= 0 {
-			continue
+		if var0 > 0 {
+			intensity += l.GetIntensity() * (var0 / (N.GetLength() * L.GetLength()))
 		}
-		intensity += l.GetIntensity() * (var0 / (N.GetLength() * L.GetLength()))
+
+		R := N.Multiply(2).Multiply(N.Dot(L)).Subtract(L)
+		V := D.Multiply(-1)
+		var0 = R.Dot(V)
+		if var0 > 0 {
+			intensity += l.GetIntensity() * math.Pow(var0/(R.GetLength()*V.GetLength()), s)
+		}
 	}
 	return intensity
 }
@@ -142,7 +148,7 @@ func (g *MyGame) TraceRay(D *vector.Vector) *color.Color {
 	CP := P.Subtract(closestSphere.GetCenter()) // sphere center to point
 	N := CP.Normalize()
 
-	intensity := g.ComputeLightIntensity(P, N)
+	intensity := g.ComputeLightIntensity(P, N, D, closestSphere.GetSpecular())
 
 	return closestSphere.GetColor().ApplyIntensity(intensity)
 }
