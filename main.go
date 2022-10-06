@@ -26,7 +26,7 @@ func main() {
 	s0 := object.NewSphere(
 		vector.NewVector(-2000, 0, 4500),
 		color.NewColor(0xff, 0, 0),
-		100,
+		300,
 		2500,
 	)
 	myGame.AddSphere(s0)
