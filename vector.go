@@ -1,4 +1,4 @@
-package vector
+package main
 
 type Vector struct {
 	x, y, z float64

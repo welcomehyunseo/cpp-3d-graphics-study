@@ -1,17 +1,16 @@
-package object
+package main
 
 import (
-	"github.com/welcomehyunseo/golang-3d-graphics-example/vector"
 	"image/color"
 )
 
 type Sphere struct {
-	center *vector.Vector
+	center *Vector
 	radius float64
 	rgba   *color.RGBA
 }
 
-func NewSphere(center *vector.Vector, radius float64, rgba *color.RGBA) *Sphere {
+func NewSphere(center *Vector, radius float64, rgba *color.RGBA) *Sphere {
 	return &Sphere{
 		center: center,
 		radius: radius,
@@ -19,7 +18,7 @@ func NewSphere(center *vector.Vector, radius float64, rgba *color.RGBA) *Sphere 
 	}
 }
 
-func (o *Sphere) GetCenter() *vector.Vector {
+func (o *Sphere) GetCenter() *Vector {
 	return o.center
 }
 
