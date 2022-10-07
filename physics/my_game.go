@@ -1,5 +1,6 @@
 package physics
 
+import "C"
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/welcomehyunseo/golang-3d-graphics-example/physics/color"
@@ -21,8 +22,8 @@ type Viewport struct {
 type Camera struct {
 	center               *vector.Vector
 	viewport             *Viewport
-	distanceToViewport   int
-	viewDistanceMultiple int
+	distanceToViewport   float64
+	viewDistanceMultiple float64
 }
 
 type MyGame struct {
@@ -32,9 +33,9 @@ type MyGame struct {
 	camera      *Camera
 }
 
-func NewMyGame(cameraCenter *vector.Vector, width, height, distanceToViewport, viewDistanceMultiple int) *MyGame {
+func NewMyGame(cameraCenter *vector.Vector, width, height int, distanceToViewport, viewDistanceMultiple float64) *MyGame {
 	framebuffer := make([]*color.Color, width*height)
-	for i, _ := range framebuffer {
+	for i := range framebuffer {
 		framebuffer[i] = BackgroundColor
 	}
 
@@ -58,54 +59,13 @@ func (g *MyGame) AddSphere(sphere *object.Sphere) {
 	g.spheres = append(g.spheres, sphere)
 }
 
-// ComputeLightIntensity
-// params point at object surface, normal vector, D, specular
-func (g *MyGame) ComputeLightIntensity(P, N, D *vector.Vector, s float64) float64 {
-	var intensity float64 = 0
-
-	for _, l := range g.lights {
-		switch l.(type) {
-		case *light.AmbientLight:
-			intensity += l.GetIntensity()
-			continue
-		}
-
-		var L *vector.Vector = nil
-		switch l.(type) {
-		default:
-			continue
-		case *light.PointLight:
-			position := (l.(*light.PointLight)).GetPosition()
-			L = position.Subtract(P)
-			break
-		case *light.DirectionalLight:
-			direction := l.(*light.DirectionalLight).GetDirection()
-			L = direction.Multiply(-1) // reverse because inner product (a*b=length(a)*length(b)*cos(angle))
-			break
-		}
-
-		var0 := N.Dot(L)
-		if var0 > 0 {
-			intensity += l.GetIntensity() * (var0 / (N.GetLength() * L.GetLength()))
-		}
-
-		R := N.Multiply(2).Multiply(N.Dot(L)).Subtract(L)
-		V := D.Multiply(-1)
-		var0 = R.Dot(V)
-		if var0 > 0 {
-			intensity += l.GetIntensity() * math.Pow(var0/(R.GetLength()*V.GetLength()), s)
-		}
-	}
-	return intensity
-}
-
 // IntersectRaySphere
 // params D = V - C (D is direction, V on viewport point, C is camera center)
 // return isMet, t1, t2
-func (g *MyGame) IntersectRaySphere(D *vector.Vector, sphere *object.Sphere) (bool, float64, float64) {
-	C := g.camera.center
+func (g *MyGame) IntersectRaySphere(O, D *vector.Vector, sphere *object.Sphere) (bool, float64, float64) {
+
 	radius := sphere.GetRadius()
-	A := C.Subtract(sphere.GetCenter())
+	A := O.Subtract(sphere.GetCenter())
 
 	a := D.Dot(D)
 	b := A.Dot(D)
@@ -120,25 +80,84 @@ func (g *MyGame) IntersectRaySphere(D *vector.Vector, sphere *object.Sphere) (bo
 	return true, t1, t2
 }
 
-func (g *MyGame) TraceRay(D *vector.Vector) *color.Color {
-	tMin := 1
-	tMax := g.camera.viewDistanceMultiple
+func (g *MyGame) ClosestSphere(O, D *vector.Vector, tMin, tMax float64) (float64, *object.Sphere) {
 	closestT := math.MaxFloat64
 	var closestSphere *object.Sphere = nil
 	for _, sphere := range g.spheres {
-		isMet, t1, t2 := g.IntersectRaySphere(D, sphere)
+		isMet, t1, t2 := g.IntersectRaySphere(O, D, sphere)
 		if !isMet {
 			continue
 		}
-		if float64(tMin) <= t1 && t1 <= float64(tMax) && t1 < closestT {
+		if tMin <= t1 && t1 <= tMax && t1 < closestT {
 			closestT = t1
 			closestSphere = sphere
 		}
-		if float64(tMin) <= t2 && t2 <= float64(tMax) && t2 < closestT {
+		if tMin <= t2 && t2 <= tMax && t2 < closestT {
 			closestT = t2
 			closestSphere = sphere
 		}
 	}
+	return closestT, closestSphere
+}
+
+// ComputeLightIntensity
+// params point at object surface, normal vector, D, specular
+func (g *MyGame) ComputeLightIntensity(P, N, D *vector.Vector, s float64) float64 {
+	var intensity float64 = 0
+
+	for _, l := range g.lights {
+		switch l.(type) {
+		case *light.AmbientLight:
+			intensity += l.GetIntensity()
+			continue
+		}
+
+		var L *vector.Vector = nil
+		var tMax float64
+		switch l.(type) {
+		default:
+			continue
+		case *light.PointLight:
+			position := (l.(*light.PointLight)).GetPosition()
+			L = position.Subtract(P)
+			tMax = 1
+			break
+		case *light.DirectionalLight:
+			direction := l.(*light.DirectionalLight).GetDirection()
+			L = direction.Multiply(-1) // reverse because inner product (a*b=length(a)*length(b)*cos(angle))
+			tMax = math.MaxFloat64
+			break
+		}
+
+		// shadow check
+		_, shadowSphere := g.ClosestSphere(P, L, 0.001, tMax)
+		if shadowSphere == nil {
+			continue
+		}
+
+		// diffuse reflection
+		var0 := N.Dot(L)
+		if var0 > 0 {
+			intensity += l.GetIntensity() * (var0 / (N.GetLength() * L.GetLength()))
+		}
+
+		// specular reflection
+		R := N.Multiply(2).Multiply(N.Dot(L)).Subtract(L)
+		V := D.Multiply(-1)
+		var0 = R.Dot(V)
+		if var0 > 0 {
+			intensity += l.GetIntensity() * math.Pow(var0/(R.GetLength()*V.GetLength()), s)
+		}
+	}
+	return intensity
+}
+
+func (g *MyGame) TraceRay(D *vector.Vector) *color.Color {
+
+	tMin := float64(1)
+	tMax := g.camera.viewDistanceMultiple
+	C := g.camera.center
+	closestT, closestSphere := g.ClosestSphere(C, D, tMin, tMax)
 	if closestSphere == nil {
 		return BackgroundColor
 	}
@@ -161,7 +180,7 @@ func (g *MyGame) UpdateFramebuffer() {
 		for k := 0; k < vw; k++ {
 			vx := float64(k - vw/2)
 			vy := -float64(l - vh/2)
-			vz := float64(g.camera.distanceToViewport)
+			vz := g.camera.distanceToViewport
 			V := vector.NewVector(vx, vy, vz)
 			C := g.camera.center
 			D := V.Subtract(C)
