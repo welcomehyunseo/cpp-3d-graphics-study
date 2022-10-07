@@ -9,6 +9,10 @@ import (
 	"math"
 )
 
+const (
+	DefaultRecursionDepth = 3 // for reflections
+)
+
 var (
 	BackgroundColor = color.NewColor(255, 255, 255)
 )
@@ -99,6 +103,10 @@ func (g *MyGame) ClosestSphere(O, D *vector.Vector, tMin, tMax float64) (float64
 	return closestT, closestSphere
 }
 
+func reflectRay(D, N *vector.Vector) *vector.Vector {
+	return N.Multiply(2).Multiply(N.Dot(D)).Subtract(D)
+}
+
 // ComputeLightIntensity
 // params point at object surface, normal vector, direction, specular
 func (g *MyGame) ComputeLightIntensity(P, N, D *vector.Vector, s float64) float64 {
@@ -140,7 +148,7 @@ func (g *MyGame) ComputeLightIntensity(P, N, D *vector.Vector, s float64) float6
 		}
 
 		// specular reflection
-		R := N.Multiply(2).Multiply(N.Dot(L)).Subtract(L)
+		R := reflectRay(L, N)
 		V := D.Multiply(-1)
 		var0 = R.Dot(V)
 		if var0 > 0 {
@@ -150,9 +158,7 @@ func (g *MyGame) ComputeLightIntensity(P, N, D *vector.Vector, s float64) float6
 	return intensity
 }
 
-func (g *MyGame) TraceRay(O, D *vector.Vector) *color.Color {
-	tMin := float64(1)
-	tMax := g.camera.viewDistanceMultiple
+func (g *MyGame) TraceRay(O, D *vector.Vector, tMin, tMax float64, recursionDepth int) *color.Color {
 	closestT, closestSphere := g.ClosestSphere(O, D, tMin, tMax)
 	if closestSphere == nil {
 		return BackgroundColor
@@ -164,8 +170,19 @@ func (g *MyGame) TraceRay(O, D *vector.Vector) *color.Color {
 	N := CP.Normalize()
 
 	intensity := g.ComputeLightIntensity(P, N, D, closestSphere.GetSpecular())
+	localColor := closestSphere.GetColor().ApplyIntensity(intensity)
 
-	return closestSphere.GetColor().ApplyIntensity(intensity)
+	reflective := closestSphere.GetReflective()
+	if recursionDepth <= 0 || reflective <= 0 {
+		return localColor
+	}
+
+	var0 := D.Multiply(-1)
+	R := reflectRay(var0, N)
+	nextRecursionDepth := recursionDepth - 1
+	reflectedColor := g.TraceRay(P, R, 0.001, math.MaxFloat64, nextRecursionDepth)
+
+	return localColor.ApplyIntensity(1 - reflective).Add(reflectedColor.ApplyIntensity(reflective))
 }
 
 func (g *MyGame) UpdateFramebuffer() {
@@ -181,7 +198,10 @@ func (g *MyGame) UpdateFramebuffer() {
 			C := g.camera.center
 			D := V.Subtract(C)
 			i := l*vw + k
-			g.framebuffer[i] = g.TraceRay(C, D)
+
+			tMin := float64(1)
+			tMax := g.camera.viewDistanceMultiple
+			g.framebuffer[i] = g.TraceRay(C, D, tMin, tMax, DefaultRecursionDepth)
 		}
 	}
 }

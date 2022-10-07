@@ -10,10 +10,10 @@ type Sphere struct {
 	radius float64
 }
 
-func NewSphere(center *vector.Vector, color *color.Color, specular float64, radius float64) *Sphere {
+func NewSphere(center *vector.Vector, color *color.Color, specular, reflective, radius float64) *Sphere {
 	return &Sphere{
 		radius: radius,
-		object: *newObject(center, color, specular),
+		object: *newObject(center, color, specular, reflective),
 	}
 }
 

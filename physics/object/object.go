@@ -6,19 +6,21 @@ import (
 )
 
 type object struct {
-	center   *vector.Vector
-	color    *color.Color
-	specular float64 // 1 ~ 1000
+	center     *vector.Vector
+	color      *color.Color
+	specular   float64 // 0 < n <= 1000
+	reflective float64 // 0 <= n < 1
 }
 
-func newObject(center *vector.Vector, color *color.Color, specular float64) *object {
+func newObject(center *vector.Vector, color *color.Color, specular float64, reflective float64) *object {
 	if specular < 0 || 1000 < specular {
 		// TODO
 	}
 	return &object{
-		center:   center,
-		color:    color,
-		specular: specular,
+		center:     center,
+		color:      color,
+		specular:   specular,
+		reflective: reflective,
 	}
 }
 
@@ -32,4 +34,8 @@ func (o *object) GetColor() *color.Color {
 
 func (o *object) GetSpecular() float64 {
 	return o.specular
+}
+
+func (o *object) GetReflective() float64 {
+	return o.reflective
 }

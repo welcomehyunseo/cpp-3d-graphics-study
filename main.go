@@ -13,7 +13,7 @@ const (
 	Width                       = 1024
 	Height                      = 768
 	DistanceToViewport          = 500
-	DefaultViewDistanceMultiple = 10
+	DefaultViewDistanceMultiple = 100
 )
 
 func main() {
@@ -27,6 +27,7 @@ func main() {
 		vector.NewVector(-2000, 0, 4500),
 		color.NewColor(0xff, 0, 0),
 		300,
+		0,
 		2500,
 	)
 	myGame.AddSphere(s0)
@@ -34,6 +35,7 @@ func main() {
 		vector.NewVector(0, 0, 4000),
 		color.NewColor(0, 0xff, 0),
 		500,
+		0,
 		1500,
 	)
 	myGame.AddSphere(s1)
@@ -41,14 +43,16 @@ func main() {
 		vector.NewVector(1000, -1000, 3000),
 		color.NewColor(0, 0, 0xff),
 		1000,
+		0,
 		1000,
 	)
 	myGame.AddSphere(s2)
 	s3 := object.NewSphere(
-		vector.NewVector(1800, 0, 2000),
+		vector.NewVector(4000, 0, 4000),
 		color.NewColor(0xff, 0xff, 0),
 		2,
-		200,
+		0.5,
+		2500,
 	)
 	myGame.AddSphere(s3)
 
