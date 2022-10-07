@@ -201,7 +201,7 @@ func (g *MyGame) traceRay(O, D *vector.Vector, tMin, tMax float64, recursionDept
 	return localColor.ApplyIntensity(1 - reflective).Add(reflectedColor.ApplyIntensity(reflective))
 }
 
-func (g *MyGame) updateFramebuffer() {
+func (g *MyGame) UpdateFramebuffer() {
 	vw := g.camera.viewport.width
 	vh := g.camera.viewport.height
 

@@ -13,7 +13,7 @@ const (
 	Width                       = 1024
 	Height                      = 768
 	DistanceToViewport          = 500
-	DefaultViewDistanceMultiple = 100
+	DefaultViewDistanceMultiple = 10
 )
 
 func main() {
@@ -65,7 +65,7 @@ func main() {
 
 	go func() {
 		for {
-			myGame.updateFramebuffer()
+			myGame.UpdateFramebuffer()
 		}
 	}()
 
