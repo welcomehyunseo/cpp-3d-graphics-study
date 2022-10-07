@@ -44,10 +44,17 @@ func main() {
 		1000,
 	)
 	myGame.AddSphere(s2)
+	s3 := object.NewSphere(
+		vector.NewVector(1800, 0, 2000),
+		color.NewColor(0xff, 0xff, 0),
+		1,
+		200,
+	)
+	myGame.AddSphere(s3)
 
 	l0 := light.NewAmbientLight(0.2)
 	myGame.AddLight(l0)
-	l1 := light.NewPointLight(0.4, vector.NewVector(10000, 0, 0))
+	l1 := light.NewPointLight(0.4, vector.NewVector(4000, 0, 0))
 	myGame.AddLight(l1)
 	l2 := light.NewDirectionalLight(0.2, vector.NewVector(0, -1, 0))
 	myGame.AddLight(l2)

@@ -1,6 +1,5 @@
 package physics
 
-import "C"
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/welcomehyunseo/golang-3d-graphics-example/physics/color"
@@ -35,7 +34,7 @@ type MyGame struct {
 
 func NewMyGame(cameraCenter *vector.Vector, width, height int, distanceToViewport, viewDistanceMultiple float64) *MyGame {
 	framebuffer := make([]*color.Color, width*height)
-	for i := range framebuffer {
+	for i, _ := range framebuffer {
 		framebuffer[i] = BackgroundColor
 	}
 
@@ -128,10 +127,9 @@ func (g *MyGame) ComputeLightIntensity(P, N, D *vector.Vector, s float64) float6
 			tMax = math.MaxFloat64
 			break
 		}
-
 		// shadow check
 		_, shadowSphere := g.ClosestSphere(P, L, 0.001, tMax)
-		if shadowSphere == nil {
+		if shadowSphere != nil {
 			continue
 		}
 
@@ -152,12 +150,10 @@ func (g *MyGame) ComputeLightIntensity(P, N, D *vector.Vector, s float64) float6
 	return intensity
 }
 
-func (g *MyGame) TraceRay(D *vector.Vector) *color.Color {
-
+func (g *MyGame) TraceRay(O, D *vector.Vector) *color.Color {
 	tMin := float64(1)
 	tMax := g.camera.viewDistanceMultiple
-	C := g.camera.center
-	closestT, closestSphere := g.ClosestSphere(C, D, tMin, tMax)
+	closestT, closestSphere := g.ClosestSphere(O, D, tMin, tMax)
 	if closestSphere == nil {
 		return BackgroundColor
 	}
@@ -185,7 +181,7 @@ func (g *MyGame) UpdateFramebuffer() {
 			C := g.camera.center
 			D := V.Subtract(C)
 			i := l*vw + k
-			g.framebuffer[i] = g.TraceRay(D)
+			g.framebuffer[i] = g.TraceRay(C, D)
 		}
 	}
 }
