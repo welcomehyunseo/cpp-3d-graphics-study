@@ -18,7 +18,7 @@ const (
 
 func main() {
 	ebiten.SetWindowSize(Width, Height)
-	ebiten.SetWindowTitle("Basic Raytracing")
+	ebiten.SetWindowTitle("Reflections")
 
 	cameraCenter := vector.NewVector(0, 0, 0)
 	myGame := physics.NewMyGame(cameraCenter, Width, Height, DistanceToViewport, DefaultViewDistanceMultiple)
