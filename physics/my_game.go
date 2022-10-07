@@ -62,10 +62,11 @@ func (g *MyGame) AddSphere(sphere *object.Sphere) {
 	g.spheres = append(g.spheres, sphere)
 }
 
-// IntersectRaySphere
-// params D = V - C (D is direction, V on viewport point, C is camera center)
-// return isMet, t1, t2
-func (g *MyGame) IntersectRaySphere(O, D *vector.Vector, sphere *object.Sphere) (bool, float64, float64) {
+// intersectRaySphere
+// params origin vector, direction vector, sphere
+// returns isMet, t1, t2
+// t1, t2: the value of a point in contact with an object about every point P along the ray
+func intersectRaySphere(O, D *vector.Vector, sphere *object.Sphere) (bool, float64, float64) {
 
 	radius := sphere.GetRadius()
 	A := O.Subtract(sphere.GetCenter())
@@ -83,11 +84,17 @@ func (g *MyGame) IntersectRaySphere(O, D *vector.Vector, sphere *object.Sphere) 
 	return true, t1, t2
 }
 
-func (g *MyGame) ClosestSphere(O, D *vector.Vector, tMin, tMax float64) (float64, *object.Sphere) {
+// findClosestSphere
+// params origin vector, direction vector, tMin, tMax
+// returns closestT, closestSphere
+// tMin, tMax: the minimum/maximum value about every point P along the ray
+// closestT: the closest value at a point in contact with an object
+// closestSphere: the closest sphere in the direction
+func (g *MyGame) findClosestSphere(O, D *vector.Vector, tMin, tMax float64) (float64, *object.Sphere) {
 	closestT := math.MaxFloat64
 	var closestSphere *object.Sphere = nil
 	for _, sphere := range g.spheres {
-		isMet, t1, t2 := g.IntersectRaySphere(O, D, sphere)
+		isMet, t1, t2 := intersectRaySphere(O, D, sphere)
 		if !isMet {
 			continue
 		}
@@ -103,13 +110,18 @@ func (g *MyGame) ClosestSphere(O, D *vector.Vector, tMin, tMax float64) (float64
 	return closestT, closestSphere
 }
 
+// reflectRay
+// params direction vector, normal vector
+// returns reflection vector
+// R=2N(D⋅N)-D
 func reflectRay(D, N *vector.Vector) *vector.Vector {
 	return N.Multiply(2).Multiply(N.Dot(D)).Subtract(D)
 }
 
-// ComputeLightIntensity
-// params point at object surface, normal vector, direction, specular
-func (g *MyGame) ComputeLightIntensity(P, N, D *vector.Vector, s float64) float64 {
+// computeLightIntensity
+// params point at object surface, normal vector, direction vector, specular
+// returns intensity of light
+func (g *MyGame) computeLightIntensity(P, N, D *vector.Vector, s float64) float64 {
 	var intensity float64 = 0
 
 	for _, l := range g.lights {
@@ -136,7 +148,7 @@ func (g *MyGame) ComputeLightIntensity(P, N, D *vector.Vector, s float64) float6
 			break
 		}
 		// shadow check
-		_, shadowSphere := g.ClosestSphere(P, L, 0.001, tMax)
+		_, shadowSphere := g.findClosestSphere(P, L, 0.001, tMax)
 		if shadowSphere != nil {
 			continue
 		}
@@ -158,18 +170,22 @@ func (g *MyGame) ComputeLightIntensity(P, N, D *vector.Vector, s float64) float6
 	return intensity
 }
 
-func (g *MyGame) TraceRay(O, D *vector.Vector, tMin, tMax float64, recursionDepth int) *color.Color {
-	closestT, closestSphere := g.ClosestSphere(O, D, tMin, tMax)
+// traceRay
+// params origin vector, direction vector, tMin, tMax, depth for reflections
+// tMin, tMax: the minimum/maximum value about every point P along the ray
+// P=O+t(V-O)
+// P=O+tD
+func (g *MyGame) traceRay(O, D *vector.Vector, tMin, tMax float64, recursionDepth int) *color.Color {
+	closestT, closestSphere := g.findClosestSphere(O, D, tMin, tMax)
 	if closestSphere == nil {
 		return BackgroundColor
 	}
 
-	A := g.camera.center
-	P := A.Add(D.Multiply(closestT))            // origin to point
+	P := O.Add(D.Multiply(closestT))            // origin to point
 	CP := P.Subtract(closestSphere.GetCenter()) // sphere center to point
 	N := CP.Normalize()
 
-	intensity := g.ComputeLightIntensity(P, N, D, closestSphere.GetSpecular())
+	intensity := g.computeLightIntensity(P, N, D, closestSphere.GetSpecular())
 	localColor := closestSphere.GetColor().ApplyIntensity(intensity)
 
 	reflective := closestSphere.GetReflective()
@@ -180,12 +196,12 @@ func (g *MyGame) TraceRay(O, D *vector.Vector, tMin, tMax float64, recursionDept
 	var0 := D.Multiply(-1)
 	R := reflectRay(var0, N)
 	nextRecursionDepth := recursionDepth - 1
-	reflectedColor := g.TraceRay(P, R, 0.001, math.MaxFloat64, nextRecursionDepth)
+	reflectedColor := g.traceRay(P, R, 0.001, math.MaxFloat64, nextRecursionDepth)
 
 	return localColor.ApplyIntensity(1 - reflective).Add(reflectedColor.ApplyIntensity(reflective))
 }
 
-func (g *MyGame) UpdateFramebuffer() {
+func (g *MyGame) updateFramebuffer() {
 	vw := g.camera.viewport.width
 	vh := g.camera.viewport.height
 
@@ -201,7 +217,7 @@ func (g *MyGame) UpdateFramebuffer() {
 
 			tMin := float64(1)
 			tMax := g.camera.viewDistanceMultiple
-			g.framebuffer[i] = g.TraceRay(C, D, tMin, tMax, DefaultRecursionDepth)
+			g.framebuffer[i] = g.traceRay(C, D, tMin, tMax, DefaultRecursionDepth)
 		}
 	}
 }

@@ -65,7 +65,7 @@ func main() {
 
 	go func() {
 		for {
-			myGame.UpdateFramebuffer()
+			myGame.updateFramebuffer()
 		}
 	}()
 
