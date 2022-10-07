@@ -100,7 +100,7 @@ func (g *MyGame) ClosestSphere(O, D *vector.Vector, tMin, tMax float64) (float64
 }
 
 // ComputeLightIntensity
-// params point at object surface, normal vector, D, specular
+// params point at object surface, normal vector, direction, specular
 func (g *MyGame) ComputeLightIntensity(P, N, D *vector.Vector, s float64) float64 {
 	var intensity float64 = 0
 
